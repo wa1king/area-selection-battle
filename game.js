@@ -597,7 +597,7 @@ class AreaGame {
         await this.sleep(300);
     }
 
-    // 揭晓动画 - 有序消失，从一端到另一端
+    // 揭晓动画 - 有序消失，从一端到另一端，所有区域同步
     async animateReveal() {
         // 为每个区域创建副本用于动画，并对格子进行排序
         const regionStates = this.regions.map(region => ({
@@ -610,6 +610,10 @@ class AreaGame {
         
         // 同时减少所有区域，每次每个区域减少一格
         while (regionStates.some(r => r.remainingCells.length > 0)) {
+            // 第一步：收集所有要在这一轮移除的格子
+            const cellsToRemove = [];
+            const regionsToRank = [];
+            
             for (const regionState of regionStates) {
                 if (regionState.remainingCells.length > 0) {
                     // 有序移除格子 - 从排序列表的开头移除
@@ -624,21 +628,33 @@ class AreaGame {
                         }
                     }
                     
-                    // 更新SVG路径
-                    const path = this.gridToPath(regionState.remainingCells);
-                    const pathElement = this.regionsContainer.querySelector(`[data-id="${regionState.id}"]`);
-                    if (pathElement) {
-                        pathElement.setAttribute('d', path);
-                    }
+                    cellsToRemove.push(regionState);
                     
-                    // 如果区域刚好完全消失，显示排名
+                    // 检查是否完全消失
                     if (regionState.remainingCells.length === 0 && !regionState.ranked) {
                         regionState.ranked = true;
-                        await this.sleep(100); // 短暂延迟
-                        this.showRank(regionState);
-                        await this.sleep(600); // 显示排名后暂停，让玩家看清楚
+                        regionsToRank.push(regionState);
                     }
                 }
+            }
+            
+            // 第二步：同步更新所有SVG路径（确保同时渲染）
+            cellsToRemove.forEach(regionState => {
+                const path = this.gridToPath(regionState.remainingCells);
+                const pathElement = this.regionsContainer.querySelector(`[data-id="${regionState.id}"]`);
+                if (pathElement) {
+                    pathElement.setAttribute('d', path);
+                }
+            });
+            
+            // 第三步：处理排名显示
+            if (regionsToRank.length > 0) {
+                await this.sleep(100); // 短暂延迟
+                // 同时显示所有完成的区域排名
+                regionsToRank.forEach(regionState => {
+                    this.showRank(regionState);
+                });
+                await this.sleep(600); // 显示排名后暂停，让玩家看清楚
             }
             
             // 统一的动画速度
