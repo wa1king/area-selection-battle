@@ -233,38 +233,97 @@ class AreaGame {
         return regionCells;
     }
     
-    // 第三步：面积平衡，确保差异≤2格
+    // 第三步：面积平衡，确保四个不同面积且前三名连续
     balanceAreas(grid, regionCells, random) {
-        const maxIterations = 600;
-        let failureStreak = 0;
+        const totalCells = this.gridWidth * this.gridHeight;
+        const targetAreas = this.calculateOptimalAreas(totalCells);
         
-        for (let iter = 0; iter < maxIterations; iter++) {
-            const areas = regionCells.map(cells => cells.length);
-            const maxArea = Math.max(...areas);
-            const minArea = Math.min(...areas);
+        console.log(`目标面积分配: ${targetAreas.join(', ')} (总计${totalCells}格)`);
+        
+        const maxIterations = 1000;
+        let iteration = 0;
+        
+        while (iteration < maxIterations) {
+            iteration++;
             
-            if (maxArea - minArea <= 2) {
+            // 获取当前面积
+            const currentAreas = regionCells.map(cells => cells.length);
+            
+            // 检查是否达到目标
+            if (this.isTargetAchieved(currentAreas, targetAreas)) {
                 break;
             }
             
-            const maxIdx = areas.indexOf(maxArea);
-            const minIdx = areas.indexOf(minArea);
-            const transferred = this.transferCellSafe(grid, regionCells, maxIdx, minIdx, random);
+            // 找到需要调整的区域对
+            const adjustment = this.findBestAdjustment(currentAreas, targetAreas);
+            if (!adjustment) {
+                // 如果无法找到调整方案，进行随机扰动
+                this.randomMorphBoundaries(grid, regionCells, random, 100, 8);
+                regionCells = this.extractRegionCells(grid);
+                continue;
+            }
             
+            // 执行调整
+            const transferred = this.transferCellSafe(grid, regionCells, adjustment.fromIdx, adjustment.toIdx, random);
             if (!transferred) {
-                failureStreak++;
-                if (failureStreak > 30) {
-                    this.randomMorphBoundaries(grid, regionCells, random, 200, 6);
-                    failureStreak = 0;
+                // 转移失败，尝试其他方案或随机扰动
+                if (iteration % 50 === 0) {
+                    this.randomMorphBoundaries(grid, regionCells, random, 100, 8);
+                    regionCells = this.extractRegionCells(grid);
                 }
-            } else {
-                failureStreak = 0;
             }
         }
         
         const finalAreas = regionCells.map(cells => cells.length);
-        const diff = Math.max(...finalAreas) - Math.min(...finalAreas);
-        console.log(`面积平衡完成，最终面积: ${finalAreas.join(', ')}，差异: ${diff}`);
+        const sortedAreas = [...finalAreas].sort((a, b) => a - b);
+        console.log(`面积平衡完成，最终面积: ${finalAreas.join(', ')}`);
+        console.log(`排序后面积: ${sortedAreas.join(', ')}，目标: ${targetAreas.join(', ')}`);
+    }
+    
+    // 计算最优面积分配
+    calculateOptimalAreas(totalCells) {
+        const base = Math.floor(totalCells / 4);
+        
+        // 优先策略：让前三名连续，最小的承担差距
+        const top3 = [base, base + 1, base + 2]; // 连续的前三名
+        const remaining = totalCells - (top3[0] + top3[1] + top3[2]);
+        
+        return [remaining, base, base + 1, base + 2].sort((a, b) => a - b);
+    }
+    
+    // 检查是否达到目标面积
+    isTargetAchieved(currentAreas, targetAreas) {
+        const sortedCurrent = [...currentAreas].sort((a, b) => a - b);
+        const sortedTarget = [...targetAreas].sort((a, b) => a - b);
+        
+        return sortedCurrent.every((area, i) => area === sortedTarget[i]);
+    }
+    
+    // 找到最佳调整方案
+    findBestAdjustment(currentAreas, targetAreas) {
+        const sortedCurrent = [...currentAreas].sort((a, b) => a - b);
+        const sortedTarget = [...targetAreas].sort((a, b) => a - b);
+        
+        // 找到最需要调整的区域
+        for (let i = 0; i < 4; i++) {
+            const diff = sortedCurrent[i] - sortedTarget[i];
+            if (diff > 0) {
+                // 当前区域过大，需要减少
+                const fromIdx = currentAreas.indexOf(sortedCurrent[i]);
+                // 找到需要增加的区域
+                for (let j = 0; j < 4; j++) {
+                    const targetDiff = sortedTarget[j] - sortedCurrent[j];
+                    if (targetDiff > 0) {
+                        const toIdx = currentAreas.indexOf(sortedCurrent[j]);
+                        if (fromIdx !== toIdx) {
+                            return { fromIdx, toIdx };
+                        }
+                    }
+                }
+            }
+        }
+        
+        return null;
     }
     
     // 安全地转移格子，确保源区域和目标区域都保持连通
@@ -597,7 +656,7 @@ class AreaGame {
         await this.sleep(300);
     }
 
-    // 揭晓动画 - 有序消失，从一端到另一端，所有区域同步
+    // 揭晓动画 - 所有区域同步消失，但排名按顺序显示
     async animateReveal() {
         // 为每个区域创建副本用于动画，并对格子进行排序
         const regionStates = this.regions.map(region => ({
@@ -606,7 +665,8 @@ class AreaGame {
             sortedCells: this.sortCellsForAnimation(region.cells)
         }));
         
-        const animationSpeed = 150; // 每格消失的间隔时间（毫秒）
+        const animationSpeed = 300; // 每格消失的间隔时间（毫秒）- 放慢一倍
+        const rankedRegions = []; // 已经显示排名的区域
         
         // 同时减少所有区域，每次每个区域减少一格
         while (regionStates.some(r => r.remainingCells.length > 0)) {
@@ -629,12 +689,14 @@ class AreaGame {
                     }
                     
                     cellsToRemove.push(regionState);
-                    
-                    // 检查是否完全消失
-                    if (regionState.remainingCells.length === 0 && !regionState.ranked) {
-                        regionState.ranked = true;
-                        regionsToRank.push(regionState);
-                    }
+                }
+            }
+            
+            // 检查完全消失的区域（在所有移除操作完成后）
+            for (const regionState of regionStates) {
+                if (regionState.remainingCells.length === 0 && !regionState.ranked) {
+                    regionState.ranked = true;
+                    regionsToRank.push(regionState);
                 }
             }
             
@@ -647,14 +709,17 @@ class AreaGame {
                 }
             });
             
-            // 第三步：处理排名显示
+            // 第三步：按面积顺序逐个显示排名，避免同时显示
             if (regionsToRank.length > 0) {
-                await this.sleep(100); // 短暂延迟
-                // 同时显示所有完成的区域排名
-                regionsToRank.forEach(regionState => {
+                // 按面积排序（从小到大），确保按正确顺序显示排名
+                regionsToRank.sort((a, b) => a.area - b.area);
+                
+                for (const regionState of regionsToRank) {
+                    await this.sleep(50); // 短暂延迟
                     this.showRank(regionState);
-                });
-                await this.sleep(600); // 显示排名后暂停，让玩家看清楚
+                    rankedRegions.push(regionState);
+                    await this.sleep(200); // 每个排名之间的间隔
+                }
             }
             
             // 统一的动画速度
@@ -703,9 +768,10 @@ class AreaGame {
         rankText.setAttribute('y', centerY * this.gridSize + this.gridSize / 2);
         rankText.setAttribute('class', 'rank-text show');
         
-        // 根据排名显示文字
+        // 根据排名显示文字 - 需要从this.regions中找到对应的排名
+        const actualRegion = this.regions.find(r => r.id === region.id);
         const rankLabels = ['第4名', '第3名', '第2名', '第1名'];
-        rankText.textContent = rankLabels[region.rank - 1];
+        rankText.textContent = rankLabels[actualRegion.rank - 1];
         
         // 如果是用户选择的区域，添加高亮
         if (region.id === this.selectedRegion) {
@@ -713,6 +779,9 @@ class AreaGame {
         }
         
         this.ranksContainer.appendChild(rankText);
+        
+        // 添加调试信息
+        console.log(`显示排名: 区域${region.id} -> ${rankLabels[actualRegion.rank - 1]} (面积: ${actualRegion.area}格)`);
     }
 
     // 下一关
