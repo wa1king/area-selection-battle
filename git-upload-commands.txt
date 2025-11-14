@@ -1,0 +1,41 @@
+# GitHub上传命令指南
+
+## 步骤1：在GitHub上创建新仓库
+1. 访问 https://github.com/new
+2. 仓库名称：area-selection-battle（或您喜欢的名称）
+3. 描述：选面积大作战 - 一个挑战视觉判断能力的HTML5游戏
+4. 选择 Public
+5. 不要勾选 "Add a README file"
+6. 点击 "Create repository"
+
+## 步骤2：执行以下命令（请替换YOUR_USERNAME和YOUR_REPO_NAME）
+
+# 添加远程仓库
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+
+# 推送到GitHub
+git branch -M main
+git push -u origin main
+
+## 示例（请替换为您的实际信息）：
+# git remote add origin https://github.com/CodeBuddy/area-selection-battle.git
+# git branch -M main
+# git push -u origin main
+
+## 当前项目状态
+- ✅ Git仓库已初始化
+- ✅ 所有文件已添加并提交
+- ✅ README.md文档已创建
+- ⏳ 等待推送到GitHub
+
+## 项目文件列表
+- index.html (游戏主页面)
+- game.js (游戏核心逻辑)
+- README.md (项目文档)
+- 选面积大作战需求文档.txt (需求文档)
+- 其他Excel文件
+
+## 推送完成后
+您的游戏将可以通过以下方式访问：
+- GitHub仓库：https://github.com/YOUR_USERNAME/YOUR_REPO_NAME
+- GitHub Pages（如果启用）：https://YOUR_USERNAME.github.io/YOUR_REPO_NAME
