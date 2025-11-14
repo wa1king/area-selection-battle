@@ -656,7 +656,7 @@ class AreaGame {
         await this.sleep(300);
     }
 
-    // 揭晓动画 - 所有区域同步消失，但排名按顺序显示
+    // 揭晓动画 - 所有区域同步消失，两段式速度
     async animateReveal() {
         // 为每个区域创建副本用于动画，并对格子进行排序
         const regionStates = this.regions.map(region => ({
@@ -665,7 +665,17 @@ class AreaGame {
             sortedCells: this.sortCellsForAnimation(region.cells)
         }));
         
-        const animationSpeed = 300; // 每格消失的间隔时间（毫秒）- 放慢一倍
+        // 两段式速度设置
+        const fastSpeed = 200;  // 快速度（毫秒）
+        const slowSpeed = 400;  // 慢速度（快速度的2倍）
+        
+        // 计算速度切换点：第四名（最小面积）还剩3格时
+        const minArea = Math.min(...regionStates.map(r => r.area));
+        const speedChangePoint = minArea - 3;
+        
+        console.log(`动画速度设置：快速${fastSpeed}ms，慢速${slowSpeed}ms，切换点：第${speedChangePoint}轮`);
+        
+        let currentBeat = 0;
         const rankedRegions = []; // 已经显示排名的区域
         
         // 同时减少所有区域，每次每个区域减少一格
@@ -722,8 +732,10 @@ class AreaGame {
                 }
             }
             
-            // 统一的动画速度
-            await this.sleep(animationSpeed);
+            // 动态选择速度：在切换点之后使用慢速度
+            const currentSpeed = currentBeat >= speedChangePoint ? slowSpeed : fastSpeed;
+            await this.sleep(currentSpeed);
+            currentBeat++;
         }
     }
 
