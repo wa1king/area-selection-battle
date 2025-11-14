@@ -469,7 +469,7 @@ class AreaGame {
             path.setAttribute('fill', region.color);
             path.setAttribute('class', 'region');
             path.setAttribute('data-id', region.id);
-            path.addEventListener('click', () => this.selectRegion(region.id));
+            path.addEventListener('click', (event) => this.selectRegion(region.id, event));
             this.regionsContainer.appendChild(path);
         });
         
@@ -477,7 +477,7 @@ class AreaGame {
     }
 
     // 选择区域
-    selectRegion(regionId) {
+    selectRegion(regionId, clickEvent) {
         if (this.state !== GameState.SELECTING) return;
         
         this.selectedRegion = regionId;
@@ -495,16 +495,15 @@ class AreaGame {
         // 清除旧标记
         this.markersContainer.innerHTML = '';
         
-        // 添加选择标记
-        const region = this.regions.find(r => r.id === regionId);
-        if (region && region.cells.length > 0) {
-            // 计算区域中心
-            const centerX = region.cells.reduce((sum, [x]) => sum + x, 0) / region.cells.length;
-            const centerY = region.cells.reduce((sum, [, y]) => sum + y, 0) / region.cells.length;
+        // 添加选择标记 - 使用鼠标点击位置
+        if (clickEvent) {
+            const svgRect = this.svg.getBoundingClientRect();
+            const clickX = clickEvent.clientX - svgRect.left;
+            const clickY = clickEvent.clientY - svgRect.top;
             
             const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            marker.setAttribute('cx', centerX * this.gridSize + this.gridSize / 2);
-            marker.setAttribute('cy', centerY * this.gridSize + this.gridSize / 2);
+            marker.setAttribute('cx', clickX);
+            marker.setAttribute('cy', clickY);
             marker.setAttribute('r', '15');
             marker.setAttribute('class', 'selection-marker');
             this.markersContainer.appendChild(marker);
@@ -576,12 +575,13 @@ class AreaGame {
         await this.sleep(300);
     }
 
-    // 揭晓动画 - 相同速度一格一格减少
+    // 揭晓动画 - 有序消失，从一端到另一端
     async animateReveal() {
-        // 为每个区域创建副本用于动画
+        // 为每个区域创建副本用于动画，并对格子进行排序
         const regionStates = this.regions.map(region => ({
             ...region,
-            remainingCells: [...region.cells]
+            remainingCells: [...region.cells],
+            sortedCells: this.sortCellsForAnimation(region.cells)
         }));
         
         const animationSpeed = 150; // 每格消失的间隔时间（毫秒）
@@ -590,9 +590,17 @@ class AreaGame {
         while (regionStates.some(r => r.remainingCells.length > 0)) {
             for (const regionState of regionStates) {
                 if (regionState.remainingCells.length > 0) {
-                    // 随机移除一个格子
-                    const randomIndex = Math.floor(Math.random() * regionState.remainingCells.length);
-                    regionState.remainingCells.splice(randomIndex, 1);
+                    // 有序移除格子 - 从排序列表的开头移除
+                    const cellToRemove = regionState.sortedCells.shift();
+                    if (cellToRemove) {
+                        // 从remainingCells中移除对应的格子
+                        const index = regionState.remainingCells.findIndex(
+                            ([x, y]) => x === cellToRemove[0] && y === cellToRemove[1]
+                        );
+                        if (index >= 0) {
+                            regionState.remainingCells.splice(index, 1);
+                        }
+                    }
                     
                     // 更新SVG路径
                     const path = this.gridToPath(regionState.remainingCells);
@@ -613,6 +621,36 @@ class AreaGame {
             
             // 统一的动画速度
             await this.sleep(animationSpeed);
+        }
+    }
+
+    // 对格子进行排序，实现从一端到另一端的有序消失
+    sortCellsForAnimation(cells) {
+        if (cells.length === 0) return [];
+        
+        // 找到区域的边界
+        const minX = Math.min(...cells.map(([x]) => x));
+        const maxX = Math.max(...cells.map(([x]) => x));
+        const minY = Math.min(...cells.map(([, y]) => y));
+        const maxY = Math.max(...cells.map(([, y]) => y));
+        
+        // 计算区域的主要方向（宽度 vs 高度）
+        const width = maxX - minX + 1;
+        const height = maxY - minY + 1;
+        
+        // 根据区域形状选择消失方向
+        if (width >= height) {
+            // 水平区域：从左到右消失
+            return [...cells].sort((a, b) => {
+                if (a[0] !== b[0]) return a[0] - b[0]; // 先按x坐标排序
+                return a[1] - b[1]; // 再按y坐标排序
+            });
+        } else {
+            // 垂直区域：从上到下消失
+            return [...cells].sort((a, b) => {
+                if (a[1] !== b[1]) return a[1] - b[1]; // 先按y坐标排序
+                return a[0] - b[0]; // 再按x坐标排序
+            });
         }
     }
 
