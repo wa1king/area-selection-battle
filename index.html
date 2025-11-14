@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>区域排序 - 选面积大作战</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Baloo 2', 'Segoe UI', sans-serif;
+            background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        .game-container {
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 36px 40px;
+            box-shadow: 0 24px 60px rgba(197, 210, 255, 0.6);
+            max-width: 900px;
+            width: 100%;
+            border: 3px solid rgba(246, 209, 255, 0.6);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-container::before {
+            content: "";
+            position: absolute;
+            inset: -120px -80px;
+            background: radial-gradient(circle at top left, rgba(255, 209, 220, 0.5), transparent 60%),
+                        radial-gradient(circle at bottom right, rgba(185, 233, 255, 0.4), transparent 55%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .game-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #5a5a89;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .level-info {
+            font-size: 18px;
+            color: #ecf0f1;
+        }
+
+        .game-board {
+            position: relative;
+            width: 660px;
+            height: 420px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            border: 4px solid #1a252f;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        svg {
+            width: 660px;
+            height: 420px;
+            display: block;
+        }
+
+        .region {
+            cursor: pointer;
+            transition: filter 0.3s;
+            stroke: none;
+            fill-rule: evenodd;
+        }
+
+        .region:hover:not(.disabled) {
+            filter: brightness(1.15);
+        }
+
+        .region.selected {
+            filter: brightness(1.3);
+        }
+
+        .region.disabled {
+            cursor: not-allowed;
+        }
+
+        .selection-marker {
+            fill: white;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9));
+            animation: pulse 1.2s infinite ease-in-out;
+            transform-origin: center;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1;
+            }
+            50% { 
+                opacity: 0.5;
+            }
+        }
+
+        .grid-line {
+            stroke: #1a252f;
+            stroke-width: 1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .grid-line.visible {
+            opacity: 0.6;
+        }
+
+        .rank-text {
+            font-size: 48px;
+            font-weight: bold;
+            fill: white;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            opacity: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .rank-text.show {
+            opacity: 1;
+            animation: rankAppear 0.5s ease-out;
+        }
+
+        .rank-text.highlight {
+            fill: #f1c40f;
+            font-size: 56px;
+            animation: rankHighlight 0.8s ease-out;
+        }
+
+        @keyframes rankAppear {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes rankHighlight {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.3);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .controls {
+            text-align: center;
+        }
+
+        .reveal-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 15px 50px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .reveal-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(245, 87, 108, 0.6);
+        }
+
+        .reveal-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .reveal-btn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .instructions {
+            text-align: center;
+            color: #ecf0f1;
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>🎮 区域排序大作战</h1>
+            <div class="level-info">关卡 <span id="current-level">1</span> / 30</div>
+        </div>
+
+        <div class="game-board">
+            <svg id="game-svg" viewBox="0 0 660 420" preserveAspectRatio="none">
+                <defs>
+                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <rect width="20" height="20" fill="none"/>
+                        <path d="M 20 0 L 0 0 0 20" class="grid-line" stroke="#1a252f" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <g id="regions-container"></g>
+                <g id="grid-container"></g>
+                <g id="markers-container"></g>
+                <g id="ranks-container"></g>
+            </svg>
+        </div>
+
+        <div class="controls">
+            <button id="reveal-btn" class="reveal-btn" disabled>揭晓</button>
+        </div>
+
+        <div class="instructions">
+            <p style="margin-bottom: 8px; font-size: 16px; color: #f1c40f;">
+                🎯 游戏目标：选择你认为面积最大的区域
+            </p>
+            <p>
+                矩形被分成4个不同颜色的区域，它们的面积极其接近（差异≤2个格子）！<br>
+                点击选择一个区域，然后点击"揭晓"查看所有区域按面积从小到大的排名
+            </p>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
