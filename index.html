@@ -12,23 +12,31 @@
         }
 
         body {
-            font-family: 'Baloo 2', 'Segoe UI', sans-serif;
-            background: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
+            font-family: 'Comic Sans MS', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 50%, #6c5ce7 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 30px;
+            padding: 20px;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         .game-container {
             background: #ffffff;
-            border-radius: 28px;
-            padding: 36px 40px;
-            box-shadow: 0 24px 60px rgba(197, 210, 255, 0.6);
-            max-width: 900px;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
             width: 100%;
-            border: 3px solid rgba(246, 209, 255, 0.6);
+            border: 3px solid #ffeaa7;
             position: relative;
             overflow: hidden;
         }
@@ -36,9 +44,11 @@
         .game-container::before {
             content: "";
             position: absolute;
-            inset: -120px -80px;
-            background: radial-gradient(circle at top left, rgba(255, 209, 220, 0.5), transparent 60%),
-                        radial-gradient(circle at bottom right, rgba(185, 233, 255, 0.4), transparent 55%);
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 234, 167, 0.1) 0%, transparent 70%);
             z-index: 0;
             pointer-events: none;
         }
@@ -50,30 +60,90 @@
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            color: #5a5a89;
+            margin-bottom: 25px;
         }
 
         .header h1 {
-            font-size: 32px;
-            margin-bottom: 10px;
+            font-size: 28px;
+            color: #2d3436;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .level-info {
-            font-size: 18px;
-            color: #ecf0f1;
+            font-size: 16px;
+            color: #636e72;
+            background: #ffeaa7;
+            padding: 5px 15px;
+            border-radius: 15px;
+            display: inline-block;
+            font-weight: bold;
         }
 
         .game-board {
             position: relative;
             width: 660px;
             height: 420px;
-            margin: 0 auto 30px;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            border: 4px solid #1a252f;
-            border-radius: 10px;
+            margin: 0 auto 25px;
+            background: #f8f9fa;
+            border: 4px solid #fdcb6e;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        /* 入场动画 - 彩虹边框 + 缩放效果 */
+        .game-board.preparing {
+            animation: rainbowBorder 0.8s ease-in-out 3, scaleIn 0.8s ease-out;
+            border-width: 6px;
+        }
+
+        @keyframes rainbowBorder {
+            0% { border-color: #ff7675; transform: scale(0.95); }
+            25% { border-color: #fdcb6e; transform: scale(1.02); }
+            50% { border-color: #00b894; transform: scale(0.98); }
+            75% { border-color: #74b9ff; transform: scale(1.01); }
+            100% { border-color: #fd79a8; transform: scale(1); }
+        }
+
+        @keyframes scaleIn {
+            0% { 
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* 准备阶段的加载文字 */
+        .loading-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3436;
+            opacity: 0;
+            z-index: 10;
+        }
+
+        .loading-text.show {
+            animation: loadingPulse 0.8s ease-in-out 3;
+        }
+
+        @keyframes loadingPulse {
+            0%, 100% { 
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            50% { 
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
         }
 
         svg {
@@ -99,6 +169,7 @@
 
         .region.disabled {
             cursor: not-allowed;
+            opacity: 0.8;
         }
 
         .selection-marker {
@@ -129,47 +200,53 @@
         }
 
         .rank-text {
-            font-size: 48px;
+            font-size: 42px;
             font-weight: bold;
-            fill: white;
+            fill: #2d3436;
             text-anchor: middle;
             dominant-baseline: middle;
             opacity: 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            filter: drop-shadow(2px 2px 4px rgba(255, 255, 255, 0.8));
         }
 
         .rank-text.show {
             opacity: 1;
-            animation: rankAppear 0.5s ease-out;
+            animation: rankPop 0.6s ease-out;
         }
 
         .rank-text.highlight {
-            fill: #f1c40f;
-            font-size: 56px;
-            animation: rankHighlight 0.8s ease-out;
+            fill: #e17055;
+            font-size: 48px;
+            animation: rankCelebrate 1s ease-out;
         }
 
-        @keyframes rankAppear {
-            from {
-                transform: scale(0);
+        @keyframes rankPop {
+            0% {
+                transform: scale(0) rotate(-180deg);
                 opacity: 0;
             }
-            to {
-                transform: scale(1);
+            70% {
+                transform: scale(1.2) rotate(10deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
                 opacity: 1;
             }
         }
 
-        @keyframes rankHighlight {
+        @keyframes rankCelebrate {
             0% {
-                transform: scale(0);
+                transform: scale(0) rotate(-180deg);
                 opacity: 0;
             }
             50% {
-                transform: scale(1.3);
+                transform: scale(1.4) rotate(10deg);
+            }
+            70% {
+                transform: scale(1.1) rotate(-5deg);
             }
             100% {
-                transform: scale(1);
+                transform: scale(1) rotate(0deg);
                 opacity: 1;
             }
         }
@@ -179,76 +256,117 @@
         }
 
         .reveal-btn {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
+            background: linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%);
+            color: #2d3436;
             border: none;
-            padding: 15px 50px;
-            font-size: 20px;
+            padding: 12px 40px;
+            font-size: 18px;
             font-weight: bold;
-            border-radius: 50px;
+            border-radius: 25px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(253, 121, 168, 0.3);
+            border: 2px solid transparent;
         }
 
         .reveal-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(245, 87, 108, 0.6);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(253, 121, 168, 0.4);
+            border-color: #e84393;
         }
 
         .reveal-btn:active:not(:disabled) {
-            transform: translateY(0);
+            transform: translateY(-1px) scale(1.02);
         }
 
         .reveal-btn:disabled {
-            background: #7f8c8d;
+            background: #ddd6fe;
+            color: #a0a0a0;
             cursor: not-allowed;
             box-shadow: none;
+            transform: none;
         }
 
         .instructions {
             text-align: center;
-            color: #ecf0f1;
+            color: #636e72;
             margin-top: 20px;
             font-size: 14px;
             line-height: 1.6;
+            background: #f1f2f6;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #00b894;
+        }
+
+        .instructions .goal {
+            font-size: 16px;
+            color: #00b894;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .game-board {
+                width: 100%;
+                max-width: 500px;
+                height: 320px;
+            }
+            
+            svg {
+                width: 100%;
+                height: 100%;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .reveal-btn {
+                padding: 10px 30px;
+                font-size: 16px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="game-container">
-        <div class="header">
-            <h1>🎮 区域排序大作战</h1>
-            <div class="level-info">关卡 <span id="current-level">1</span> / 30</div>
-        </div>
+        <div class="game-content">
+            <div class="header">
+                <h1>🎮 区域排序大作战</h1>
+                <div class="level-info">关卡 <span id="current-level">1</span> / 30</div>
+            </div>
 
-        <div class="game-board">
-            <svg id="game-svg" viewBox="0 0 660 420" preserveAspectRatio="none">
-                <defs>
-                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <rect width="20" height="20" fill="none"/>
-                        <path d="M 20 0 L 0 0 0 20" class="grid-line" stroke="#1a252f" stroke-width="1"/>
-                    </pattern>
-                </defs>
-                <g id="regions-container"></g>
-                <g id="grid-container"></g>
-                <g id="markers-container"></g>
-                <g id="ranks-container"></g>
-            </svg>
-        </div>
+            <div class="game-board">
+                <div class="loading-text" id="loading-text">准备中...</div>
+                <svg id="game-svg" viewBox="0 0 660 420" preserveAspectRatio="none">
+                    <defs>
+                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <rect width="20" height="20" fill="none"/>
+                            <path d="M 20 0 L 0 0 0 20" class="grid-line" stroke="#b2bec3" stroke-width="1"/>
+                        </pattern>
+                    </defs>
+                    <g id="regions-container"></g>
+                    <g id="grid-container"></g>
+                    <g id="markers-container"></g>
+                    <g id="ranks-container"></g>
+                </svg>
+            </div>
 
-        <div class="controls">
-            <button id="reveal-btn" class="reveal-btn" disabled>揭晓</button>
-        </div>
+            <div class="controls">
+                <button id="reveal-btn" class="reveal-btn" disabled>🎯 揭晓答案</button>
+            </div>
 
-        <div class="instructions">
-            <p style="margin-bottom: 8px; font-size: 16px; color: #f1c40f;">
-                🎯 游戏目标：选择你认为面积最大的区域
-            </p>
-            <p>
-                矩形被分成4个不同颜色的区域，它们的面积极其接近（差异≤2个格子）！<br>
-                点击选择一个区域，然后点击"揭晓"查看所有区域按面积从小到大的排名
-            </p>
+            <div class="instructions">
+                <div class="goal">
+                    🎯 游戏目标：选择你认为面积最大的区域
+                </div>
+                <p>
+                    矩形被分成4个不同颜色的区域，它们的面积极其接近（差异≤2个格子）！<br>
+                    点击选择一个区域，然后点击"揭晓答案"查看所有区域按面积从小到大的排名
+                </p>
+            </div>
         </div>
     </div>
 

@@ -83,7 +83,7 @@ class AreaGame {
     // 生成矩形分割的4个区域 - 使用"初始化+扰动+面积平衡"三步方案
     generateRectangleDivision(seed) {
         const random = this.seededRandom(seed);
-        const colors = ['#95a5a6', '#e74c3c', '#3498db', '#f39c12'];
+        const colors = ['#27ae60', '#e74c3c', '#3498db', '#f39c12'];
         
         // 第一步：初始化四象限，提供稳定起点
         const grid = this.initializeQuadrants(random);
@@ -432,7 +432,7 @@ class AreaGame {
     }
 
     // 初始化关卡
-    initLevel() {
+    async initLevel() {
         this.state = GameState.SELECTING;
         this.selectedRegion = null;
         this.levelDisplay.textContent = this.currentLevel;
@@ -457,10 +457,13 @@ class AreaGame {
         
         // 输出调试信息
         console.log(`关卡 ${this.currentLevel} - 区域面积:`, 
-            this.regions.map((r, i) => `区域${i+1}(${['灰','红','蓝','橙'][r.id]}): ${r.area}格`).join(', '));
+            this.regions.map((r, i) => `区域${i+1}(${['绿','红','蓝','橙'][r.id]}): ${r.area}格`).join(', '));
         
         // 打乱显示顺序
         const displayRegions = [...this.regions].sort(() => Math.random() - 0.5);
+        
+        // 开始边框光晕动画
+        await this.playPreparationAnimation();
         
         // 渲染区域
         displayRegions.forEach(region => {
@@ -474,6 +477,25 @@ class AreaGame {
         });
         
         this.revealBtn.disabled = true;
+    }
+
+    // 播放准备动画
+    async playPreparationAnimation() {
+        const gameBoard = document.querySelector('.game-board');
+        const loadingText = document.getElementById('loading-text');
+        
+        // 显示加载文字
+        loadingText.classList.add('show');
+        
+        // 添加准备动画类
+        gameBoard.classList.add('preparing');
+        
+        // 等待动画完成（0.8s * 3次 = 2.4s）
+        await this.sleep(2400);
+        
+        // 移除动画类和加载文字
+        gameBoard.classList.remove('preparing');
+        loadingText.classList.remove('show');
     }
 
     // 选择区域
